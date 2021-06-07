@@ -108,36 +108,45 @@ namespace NzbDrone.Core.Applications.Readarr
         {
             _logger.Debug("Updating indexer {0} [{1}]", indexer.Name, indexer.Id);
 
-            var appMappings = _appIndexerMapService.GetMappingsForApp(Definition.Id);
-            var indexerMapping = appMappings.FirstOrDefault(m => m.IndexerId == indexer.Id);
+            var appIndexerProfiles = indexer.AppProfile.FindAll(x => x.Value.ApplicationIDs.Contains(Definition.Id));
 
-            var readarrIndexer = BuildReadarrIndexer(indexer, indexer.Protocol, indexerMapping?.RemoteIndexerId ?? 0);
-
-            var remoteIndexer = _readarrV1Proxy.GetIndexer(indexerMapping.RemoteIndexerId, Settings);
-
-            if (remoteIndexer != null)
+            if (appIndexerProfiles.Count >= 1)
             {
-                _logger.Debug("Remote indexer found, syncing with current settings");
+                var appMappings = _appIndexerMapService.GetMappingsForApp(Definition.Id);
+                var indexerMapping = appMappings.FirstOrDefault(m => m.IndexerId == indexer.Id);
 
-                if (!readarrIndexer.Equals(remoteIndexer))
-                {
-                    _readarrV1Proxy.UpdateIndexer(readarrIndexer, Settings);
-                }
-            }
-            else
-            {
-                _appIndexerMapService.Delete(indexerMapping.Id);
+                var readarrIndexer =
+                    BuildReadarrIndexer(indexer, indexer.Protocol, indexerMapping?.RemoteIndexerId ?? 0);
 
-                if (indexer.Capabilities.Categories.SupportedCategories(Settings.SyncCategories.ToArray()).Any())
+                var remoteIndexer = _readarrV1Proxy.GetIndexer(indexerMapping.RemoteIndexerId, Settings);
+
+                if (remoteIndexer != null)
                 {
-                    _logger.Debug("Remote indexer not found, re-adding {0} to Readarr", indexer.Name);
-                    readarrIndexer.Id = 0;
-                    var newRemoteIndexer = _readarrV1Proxy.AddIndexer(readarrIndexer, Settings);
-                    _appIndexerMapService.Insert(new AppIndexerMap { AppId = Definition.Id, IndexerId = indexer.Id, RemoteIndexerId = newRemoteIndexer.Id });
+                    _logger.Debug("Remote indexer found, syncing with current settings");
+
+                    if (!readarrIndexer.Equals(remoteIndexer))
+                    {
+                        _readarrV1Proxy.UpdateIndexer(readarrIndexer, Settings);
+                    }
                 }
                 else
                 {
-                    _logger.Debug("Remote indexer not found for {0}, skipping re-add to Readarr due to indexer capabilities", indexer.Name);
+                    _appIndexerMapService.Delete(indexerMapping.Id);
+
+                    if (indexer.Capabilities.Categories.SupportedCategories(Settings.SyncCategories.ToArray()).Any())
+                    {
+                        _logger.Debug("Remote indexer not found, re-adding {0} to Readarr", indexer.Name);
+                        readarrIndexer.Id = 0;
+                        var newRemoteIndexer = _readarrV1Proxy.AddIndexer(readarrIndexer, Settings);
+                        _appIndexerMapService.Insert(new AppIndexerMap
+                        { AppId = Definition.Id, IndexerId = indexer.Id, RemoteIndexerId = newRemoteIndexer.Id });
+                    }
+                    else
+                    {
+                        _logger.Debug(
+                            "Remote indexer not found for {0}, skipping re-add to Readarr due to indexer capabilities",
+                            indexer.Name);
+                    }
                 }
             }
         }
@@ -152,13 +161,39 @@ namespace NzbDrone.Core.Applications.Readarr
 
             var schema = protocol == DownloadProtocol.Usenet ? newznab : torznab;
 
+            var enableRss = true;
+            var enableAutoSearch = true;
+            var enableInteractiveSearch = true;
+
+            var enableRssEnabled = indexer.AppProfile.Any(x => x.Value.EnableRss);
+            var enableRssDisabled = indexer.AppProfile.Any(x => !x.Value.EnableRss);
+            var enableAutoSearchEnabled = indexer.AppProfile.Any(x => x.Value.EnableAutomaticSearch);
+            var enableAutoSearchDisabled = indexer.AppProfile.Any(x => !x.Value.EnableAutomaticSearch);
+            var enableInteractiveSearchEnabled = indexer.AppProfile.Any(x => x.Value.EnableInteractiveSearch);
+            var enableInteractiveSearchDisabled = indexer.AppProfile.Any(x => !x.Value.EnableInteractiveSearch);
+
+            if (!enableRssEnabled && enableRssDisabled)
+            {
+                enableRss = false;
+            }
+
+            if (!enableAutoSearchEnabled && enableAutoSearchDisabled)
+            {
+                enableAutoSearch = false;
+            }
+
+            if (!enableInteractiveSearchEnabled && enableInteractiveSearchDisabled)
+            {
+                enableInteractiveSearch = false;
+            }
+
             var readarrIndexer = new ReadarrIndexer
             {
                 Id = id,
                 Name = $"{indexer.Name} (Prowlarr)",
-                EnableRss = indexer.Enable && indexer.AppProfile.Value.EnableRss,
-                EnableAutomaticSearch = indexer.Enable && indexer.AppProfile.Value.EnableAutomaticSearch,
-                EnableInteractiveSearch = indexer.Enable && indexer.AppProfile.Value.EnableInteractiveSearch,
+                EnableRss = indexer.Enable && enableRss,
+                EnableAutomaticSearch = indexer.Enable && enableAutoSearch,
+                EnableInteractiveSearch = indexer.Enable && enableInteractiveSearch,
                 Priority = indexer.Priority,
                 Implementation = indexer.Protocol == DownloadProtocol.Usenet ? "Newznab" : "Torznab",
                 ConfigContract = schema.ConfigContract,

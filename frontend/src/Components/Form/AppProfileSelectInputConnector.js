@@ -1,42 +1,28 @@
-import _ from 'lodash';
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
 import createSortedSectionSelector from 'Store/Selectors/createSortedSectionSelector';
 import sortByName from 'Utilities/Array/sortByName';
-import SelectInput from './SelectInput';
+import EnhancedSelectInput from './EnhancedSelectInput';
 
 function createMapStateToProps() {
   return createSelector(
     createSortedSectionSelector('settings.appProfiles', sortByName),
-    (state, { includeNoChange }) => includeNoChange,
-    (state, { includeMixed }) => includeMixed,
-    (appProfiles, includeNoChange, includeMixed) => {
-      const values = _.map(appProfiles.items, (appProfile) => {
-        return {
+    (state, { value }) => value,
+    (value, appProfiles) => {
+      const values = [];
+
+      appProfiles.items.foreach((appProfile) => {
+        values.push({
           key: appProfile.id,
-          value: appProfile.name
-        };
+          value: appProfile.name,
+          hint: `(${appProfile.id})`
+        });
       });
 
-      if (includeNoChange) {
-        values.unshift({
-          key: 'noChange',
-          value: 'No Change',
-          disabled: true
-        });
-      }
-
-      if (includeMixed) {
-        values.unshift({
-          key: 'mixed',
-          value: '(Mixed)',
-          disabled: true
-        });
-      }
-
       return {
+        value,
         values
       };
     }
@@ -46,29 +32,10 @@ function createMapStateToProps() {
 class AppProfileSelectInputConnector extends Component {
 
   //
-  // Lifecycle
-
-  componentDidMount() {
-    const {
-      name,
-      value,
-      values
-    } = this.props;
-
-    if (!value || !values.some((v) => v.key === value) ) {
-      const firstValue = _.find(values, (option) => !isNaN(parseInt(option.key)));
-
-      if (firstValue) {
-        this.onChange({ name, value: firstValue.key });
-      }
-    }
-  }
-
-  //
   // Listeners
 
   onChange = ({ name, value }) => {
-    this.props.onChange({ name, value: parseInt(value) });
+    this.props.onChange({ name, value });
   }
 
   //
@@ -76,7 +43,7 @@ class AppProfileSelectInputConnector extends Component {
 
   render() {
     return (
-      <SelectInput
+      <EnhancedSelectInput
         {...this.props}
         onChange={this.onChange}
       />
@@ -86,9 +53,9 @@ class AppProfileSelectInputConnector extends Component {
 
 AppProfileSelectInputConnector.propTypes = {
   name: PropTypes.string.isRequired,
+  appProfileIds: PropTypes.number,
   value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   values: PropTypes.arrayOf(PropTypes.object).isRequired,
-  includeNoChange: PropTypes.bool.isRequired,
   onChange: PropTypes.func.isRequired
 };
 

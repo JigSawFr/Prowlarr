@@ -42,7 +42,7 @@ function EditIndexerModalContent(props) {
     redirect,
     supportsRss,
     supportsRedirect,
-    appProfileId,
+    appProfileIds,
     fields,
     priority
   } = item;
@@ -111,8 +111,8 @@ function EditIndexerModalContent(props) {
 
                 <FormInputGroup
                   type={inputTypes.APP_PROFILE_SELECT}
-                  name="appProfileId"
-                  {...appProfileId}
+                  name="appProfileIds"
+                  {...appProfileIds}
                   helpText={translate('AppProfileSelectHelpText')}
                   onChange={onInputChange}
                 />

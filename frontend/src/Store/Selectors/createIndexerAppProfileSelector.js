@@ -7,7 +7,7 @@ function createIndexerAppProfileSelector() {
     createIndexerSelector(),
     (appProfiles, indexer = {}) => {
       return appProfiles.find((profile) => {
-        return profile.id === indexer.appProfileId;
+        return profile.id === indexer.appProfileIds;
       });
     }
   );

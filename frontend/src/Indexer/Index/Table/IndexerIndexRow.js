@@ -184,7 +184,7 @@ class IndexerIndexRow extends Component {
               );
             }
 
-            if (column.name === 'appProfileId') {
+            if (column.name === 'appProfileIds') {
               return (
                 <VirtualTableRowCell
                   key={name}
