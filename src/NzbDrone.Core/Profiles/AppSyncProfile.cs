@@ -11,5 +11,5 @@ namespace NzbDrone.Core.Profiles
         public bool EnableAutomaticSearch { get; set; }
         public bool EnableInteractiveSearch { get; set; }
         public List<int> ApplicationIDs { get; set; }
-}
+    }
 }

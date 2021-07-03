@@ -108,7 +108,7 @@ namespace NzbDrone.Core.Applications.Lidarr
         {
             _logger.Debug("Updating indexer {0} [{1}]", indexer.Name, indexer.Id);
 
-            var appIndexerProfiles = indexer.AppProfile.FindAll(x => x.Value.ApplicationIDs.Contains(Definition.Id));
+            var appIndexerProfiles = indexer.AppProfiles.FindAll(x => x.ApplicationIDs.Contains(Definition.Id));
 
             if (appIndexerProfiles.Count >= 1)
             {
@@ -164,12 +164,12 @@ namespace NzbDrone.Core.Applications.Lidarr
             var enableAutoSearch = true;
             var enableInteractiveSearch = true;
 
-            var enableRssEnabled = indexer.AppProfile.Any(x => x.Value.EnableRss);
-            var enableRssDisabled = indexer.AppProfile.Any(x => !x.Value.EnableRss);
-            var enableAutoSearchEnabled = indexer.AppProfile.Any(x => x.Value.EnableAutomaticSearch);
-            var enableAutoSearchDisabled = indexer.AppProfile.Any(x => !x.Value.EnableAutomaticSearch);
-            var enableInteractiveSearchEnabled = indexer.AppProfile.Any(x => x.Value.EnableInteractiveSearch);
-            var enableInteractiveSearchDisabled = indexer.AppProfile.Any(x => !x.Value.EnableInteractiveSearch);
+            var enableRssEnabled = indexer.AppProfiles.Any(x => x.EnableRss);
+            var enableRssDisabled = indexer.AppProfiles.Any(x => !x.EnableRss);
+            var enableAutoSearchEnabled = indexer.AppProfiles.Any(x => x.EnableAutomaticSearch);
+            var enableAutoSearchDisabled = indexer.AppProfiles.Any(x => !x.EnableAutomaticSearch);
+            var enableInteractiveSearchEnabled = indexer.AppProfiles.Any(x => x.EnableInteractiveSearch);
+            var enableInteractiveSearchDisabled = indexer.AppProfiles.Any(x => !x.EnableInteractiveSearch);
 
             if (!enableRssEnabled && enableRssDisabled)
             {
