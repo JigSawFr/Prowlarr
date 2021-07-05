@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Http;
 using NzbDrone.Core.Download;
+using NzbDrone.Core.History;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.IndexerSearch;
 using NzbDrone.Core.Parser;
@@ -24,16 +25,19 @@ namespace NzbDrone.Api.V1.Indexers
     {
         private IIndexerFactory _indexerFactory { get; set; }
         private ISearchForNzb _nzbSearchService { get; set; }
+        private IHistoryService _historyService { get; set; }
         private IDownloadMappingService _downloadMappingService { get; set; }
         private IDownloadService _downloadService { get; set; }
 
         public NewznabController(IndexerFactory indexerFactory,
             ISearchForNzb nzbSearchService,
+            IHistoryService historyService,
             IDownloadMappingService downloadMappingService,
             IDownloadService downloadService)
         {
             _indexerFactory = indexerFactory;
             _nzbSearchService = nzbSearchService;
+            _historyService = historyService;
             _downloadMappingService = downloadMappingService;
             _downloadService = downloadService;
         }
@@ -95,38 +99,38 @@ namespace NzbDrone.Api.V1.Indexers
                 }
             }
 
-            var indexer = _indexerFactory.Get(id);
+            var indexerDef = _indexerFactory.Get(id);
 
-            if (indexer == null)
+            if (indexerDef == null)
             {
                 throw new NotFoundException("Indexer Not Found");
             }
 
-            var indexerInstance = _indexerFactory.GetInstance(indexer);
+            var indexer = _indexerFactory.GetInstance(indexerDef);
 
             switch (requestType)
             {
                 case "caps":
-                    var caps = indexerInstance.GetCapabilities();
+                    var caps = indexer.GetCapabilities();
                     return Content(caps.ToXml(), "application/rss+xml");
                 case "search":
                 case "tvsearch":
                 case "music":
                 case "book":
                 case "movie":
-                    var results = await _nzbSearchService.Search(request, new List<int> { indexer.Id }, false);
+                    var results = await _nzbSearchService.Search(request, new List<int> { indexerDef.Id }, false);
 
                     foreach (var result in results.Releases)
                     {
-                        result.DownloadUrl = result.DownloadUrl != null ? _downloadMappingService.ConvertToProxyLink(new Uri(result.DownloadUrl), request.server, indexer.Id, result.Title).ToString() : null;
+                        result.DownloadUrl = result.DownloadUrl != null ? _downloadMappingService.ConvertToProxyLink(new Uri(result.DownloadUrl), request.server, indexerDef.Id, result.Title).ToString() : null;
 
                         if (result.DownloadProtocol == DownloadProtocol.Torrent)
                         {
-                            ((TorrentInfo)result).MagnetUrl = ((TorrentInfo)result).MagnetUrl != null ? _downloadMappingService.ConvertToProxyLink(new Uri(((TorrentInfo)result).MagnetUrl), request.server, indexer.Id, result.Title).ToString() : null;
+                            ((TorrentInfo)result).MagnetUrl = ((TorrentInfo)result).MagnetUrl != null ? _downloadMappingService.ConvertToProxyLink(new Uri(((TorrentInfo)result).MagnetUrl), request.server, indexerDef.Id, result.Title).ToString() : null;
                         }
                     }
 
-                    return Content(results.ToXml(indexerInstance.Protocol), "application/rss+xml");
+                    return Content(results.ToXml(indexer.Protocol), "application/rss+xml");
                 default:
                     throw new BadRequestException("Function Not Available");
             }
@@ -138,6 +142,16 @@ namespace NzbDrone.Api.V1.Indexers
         {
             var indexerDef = _indexerFactory.Get(id);
             var indexer = _indexerFactory.GetInstance(indexerDef);
+
+            if (indexer.Definition.Id > 0 && ((IIndexerSettings)indexer.Definition.Settings).BaseSettings.GrabLimit.HasValue)
+            {
+                var queryCount = _historyService.CountSince(indexer.Definition.Id, DateTime.Now.StartOfDay(), new List<HistoryEventType> { HistoryEventType.ReleaseGrabbed });
+
+                if (queryCount > ((IIndexerSettings)indexer.Definition.Settings).BaseSettings.GrabLimit)
+                {
+                    throw new BadRequestException("Grab limit reached");
+                }
+            }
 
             if (link.IsNullOrWhiteSpace() || file.IsNullOrWhiteSpace())
             {
