@@ -25,7 +25,7 @@ namespace NzbDrone.Core.Indexers
         private readonly IIndexerDefinitionUpdateService _definitionService;
         private readonly INewznabCapabilitiesProvider _newznabCapabilitiesProvider;
         private readonly IIndexerStatusService _indexerStatusService;
-        private readonly IProfileService _profileService;
+        private readonly IAppProfileRepository _profileRepository;
         private readonly Logger _logger;
 
         public IndexerFactory(IIndexerDefinitionUpdateService definitionService,
@@ -34,7 +34,7 @@ namespace NzbDrone.Core.Indexers
                               IIndexerRepository providerRepository,
                               IEnumerable<IIndexer> providers,
                               IServiceProvider container,
-                              IProfileService profileService,
+                              IAppProfileRepository profileRepository,
                               IEventAggregator eventAggregator,
                               Logger logger)
             : base(providerRepository, providers, container, eventAggregator, logger)
@@ -42,7 +42,7 @@ namespace NzbDrone.Core.Indexers
             _definitionService = definitionService;
             _indexerStatusService = indexerStatusService;
             _newznabCapabilitiesProvider = newznabCapabilitiesProvider;
-            _profileService = profileService;
+            _profileRepository = profileRepository;
             _logger = logger;
         }
 
@@ -59,7 +59,7 @@ namespace NzbDrone.Core.Indexers
 
                 if (definition.AppProfileIds.Any())
                 {
-                    definition.AppProfiles = _profileService.All().Where(x => definition.AppProfileIds.Contains(x.Id)).ToList();
+                    definition.AppProfiles = _profileRepository.All().Where(x => definition.AppProfileIds.Contains(x.Id)).ToList();
                 }
             }
 
@@ -77,7 +77,7 @@ namespace NzbDrone.Core.Indexers
 
             if (definition.AppProfileIds.Any())
             {
-                definition.AppProfiles = _profileService.All().Where(x => definition.AppProfileIds.Contains(x.Id)).ToList();
+                definition.AppProfiles = _profileRepository.All().Where(x => definition.AppProfileIds.Contains(x.Id)).ToList();
             }
 
             return definition;
