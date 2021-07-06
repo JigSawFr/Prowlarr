@@ -6,9 +6,7 @@ function createIndexerAppProfileSelector() {
     (state) => state.settings.appProfiles.items,
     createIndexerSelector(),
     (appProfiles, indexer = {}) => {
-      return appProfiles.find((profile) => {
-        return profile.id === indexer.appProfileIds;
-      });
+      return Array(appProfiles.find((profile) => indexer.appProfileIds.includes(profile.id)));
     }
   );
 }
