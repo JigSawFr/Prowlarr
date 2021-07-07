@@ -762,13 +762,14 @@ namespace NzbDrone.Core.Indexers.Cardigann
                                     href = downloadElement.TextContent;
                                 }
 
-                                href = ApplyFilters(href, download.Filters, variables);
+                                href = ApplyFilters(href, selector.Filters, variables);
                                 link = ResolvePath(href, link);
+                                break;
                             }
                             else
                             {
                                 _logger.Error(string.Format("CardigannIndexer ({0}): Download selector {1} didn't match:\n{2}", _definition.Id, queryselector, results));
-                                throw new Exception(string.Format("Download selector {0} didn't match", queryselector));
+                                continue;
                             }
                         }
                         catch (Exception e)

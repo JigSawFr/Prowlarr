@@ -168,8 +168,6 @@ namespace NzbDrone.Core.Indexers.Cardigann
     public class DownloadBlock
     {
         public List<DownloadsField> Selectors { get; set; }
-        public List<DownloadsField> Attributes { get; set; }
-        public List<FilterBlock> Filters { get; set; }
         public string Method { get; set; }
         public RequestBlock Before { get; set; }
     }
@@ -178,5 +176,6 @@ namespace NzbDrone.Core.Indexers.Cardigann
     {
         public string Selector { get; set; }
         public string Attribute { get; set; }
+        public List<FilterBlock> Filters { get; set; }
     }
 }
