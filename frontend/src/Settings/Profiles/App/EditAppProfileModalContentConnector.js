@@ -11,9 +11,9 @@ function createMapStateToProps() {
   return createSelector(
     createProviderSettingsSelector('appProfiles'),
     createProfileInUseSelector('appProfileIds'),
-    (appProfile, isInUse) => {
+    (appProfiles, isInUse) => {
       return {
-        ...appProfile,
+        ...appProfiles,
         isInUse
       };
     }

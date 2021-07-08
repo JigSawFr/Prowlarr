@@ -13,7 +13,7 @@ function createMapStateToProps() {
     (value, appProfiles) => {
       const values = [];
 
-      appProfiles.items.foreach((appProfile) => {
+      appProfiles.forEach((appProfile) => {
         values.push({
           key: appProfile.id,
           value: appProfile.name,
