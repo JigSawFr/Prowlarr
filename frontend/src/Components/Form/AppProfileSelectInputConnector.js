@@ -2,14 +2,12 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
-import createSortedSectionSelector from 'Store/Selectors/createSortedSectionSelector';
-import sortByName from 'Utilities/Array/sortByName';
 import EnhancedSelectInput from './EnhancedSelectInput';
 
 function createMapStateToProps() {
   return createSelector(
-    createSortedSectionSelector('settings.appProfiles', sortByName),
     (state, { value }) => value,
+    (state) => state.settings.appProfiles.items,
     (value, appProfiles) => {
       const values = [];
 
@@ -53,7 +51,7 @@ class AppProfileSelectInputConnector extends Component {
 
 AppProfileSelectInputConnector.propTypes = {
   name: PropTypes.string.isRequired,
-  appProfileIds: PropTypes.number,
+  appProfileIds: PropTypes.arrayOf(PropTypes.number).isRequired,
   value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   values: PropTypes.arrayOf(PropTypes.object).isRequired,
   onChange: PropTypes.func.isRequired
