@@ -108,48 +108,43 @@ namespace NzbDrone.Core.Applications.Readarr
         {
             _logger.Debug("Updating indexer {0} [{1}]", indexer.Name, indexer.Id);
 
-            var appIndexerProfiles = indexer.AppProfiles.FindAll(x => x.ApplicationIDs.Contains(Definition.Id));
+            var appMappings = _appIndexerMapService.GetMappingsForApp(Definition.Id);
+            var indexerMapping = appMappings.FirstOrDefault(m => m.IndexerId == indexer.Id);
 
-            if (appIndexerProfiles.Count >= 1)
+            var readarrIndexer =
+                BuildReadarrIndexer(indexer, indexer.Protocol, indexerMapping?.RemoteIndexerId ?? 0);
+
+            var remoteIndexer = _readarrV1Proxy.GetIndexer(indexerMapping.RemoteIndexerId, Settings);
+
+            if (remoteIndexer != null)
             {
-                var appMappings = _appIndexerMapService.GetMappingsForApp(Definition.Id);
-                var indexerMapping = appMappings.FirstOrDefault(m => m.IndexerId == indexer.Id);
+                _logger.Debug("Remote indexer found, syncing with current settings");
 
-                var readarrIndexer =
-                    BuildReadarrIndexer(indexer, indexer.Protocol, indexerMapping?.RemoteIndexerId ?? 0);
-
-                var remoteIndexer = _readarrV1Proxy.GetIndexer(indexerMapping.RemoteIndexerId, Settings);
-
-                if (remoteIndexer != null)
+                if (!readarrIndexer.Equals(remoteIndexer))
                 {
-                    _logger.Debug("Remote indexer found, syncing with current settings");
+                    _readarrV1Proxy.UpdateIndexer(readarrIndexer, Settings);
+                }
+            }
+            else
+            {
+                _appIndexerMapService.Delete(indexerMapping.Id);
 
-                    if (!readarrIndexer.Equals(remoteIndexer))
-                    {
-                        _readarrV1Proxy.UpdateIndexer(readarrIndexer, Settings);
-                    }
+                if (indexer.Capabilities.Categories.SupportedCategories(Settings.SyncCategories.ToArray()).Any())
+                {
+                    _logger.Debug("Remote indexer not found, re-adding {0} to Readarr", indexer.Name);
+                    readarrIndexer.Id = 0;
+                    var newRemoteIndexer = _readarrV1Proxy.AddIndexer(readarrIndexer, Settings);
+                    _appIndexerMapService.Insert(new AppIndexerMap
+                    { AppId = Definition.Id, IndexerId = indexer.Id, RemoteIndexerId = newRemoteIndexer.Id });
                 }
                 else
                 {
-                    _appIndexerMapService.Delete(indexerMapping.Id);
-
-                    if (indexer.Capabilities.Categories.SupportedCategories(Settings.SyncCategories.ToArray()).Any())
-                    {
-                        _logger.Debug("Remote indexer not found, re-adding {0} to Readarr", indexer.Name);
-                        readarrIndexer.Id = 0;
-                        var newRemoteIndexer = _readarrV1Proxy.AddIndexer(readarrIndexer, Settings);
-                        _appIndexerMapService.Insert(new AppIndexerMap
-                        { AppId = Definition.Id, IndexerId = indexer.Id, RemoteIndexerId = newRemoteIndexer.Id });
-                    }
-                    else
-                    {
-                        _logger.Debug(
-                            "Remote indexer not found for {0}, skipping re-add to Readarr due to indexer capabilities",
-                            indexer.Name);
-                    }
+                    _logger.Debug(
+                        "Remote indexer not found for {0}, skipping re-add to Readarr due to indexer capabilities",
+                        indexer.Name);
                 }
             }
-        }
+            }
 
         private ReadarrIndexer BuildReadarrIndexer(IndexerDefinition indexer, DownloadProtocol protocol, int id = 0)
         {

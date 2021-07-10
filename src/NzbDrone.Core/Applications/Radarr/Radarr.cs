@@ -108,44 +108,39 @@ namespace NzbDrone.Core.Applications.Radarr
         {
             _logger.Debug("Updating indexer {0} [{1}]", indexer.Name, indexer.Id);
 
-            var appIndexerProfiles = indexer.AppProfiles.FindAll(x => x.ApplicationIDs.Contains(Definition.Id));
+            var appMappings = _appIndexerMapService.GetMappingsForApp(Definition.Id);
+            var indexerMapping = appMappings.FirstOrDefault(m => m.IndexerId == indexer.Id);
 
-            if (appIndexerProfiles.Count >= 1)
+            var radarrIndexer = BuildRadarrIndexer(indexer, indexer.Protocol, indexerMapping?.RemoteIndexerId ?? 0);
+
+            var remoteIndexer = _radarrV3Proxy.GetIndexer(indexerMapping.RemoteIndexerId, Settings);
+
+            if (remoteIndexer != null)
             {
-                var appMappings = _appIndexerMapService.GetMappingsForApp(Definition.Id);
-                var indexerMapping = appMappings.FirstOrDefault(m => m.IndexerId == indexer.Id);
+                _logger.Debug("Remote indexer found, syncing with current settings");
 
-                var radarrIndexer = BuildRadarrIndexer(indexer, indexer.Protocol, indexerMapping?.RemoteIndexerId ?? 0);
-
-                var remoteIndexer = _radarrV3Proxy.GetIndexer(indexerMapping.RemoteIndexerId, Settings);
-
-                if (remoteIndexer != null)
+                if (!radarrIndexer.Equals(remoteIndexer))
                 {
-                    _logger.Debug("Remote indexer found, syncing with current settings");
+                    _radarrV3Proxy.UpdateIndexer(radarrIndexer, Settings);
+                }
+            }
+            else
+            {
+                _appIndexerMapService.Delete(indexerMapping.Id);
 
-                    if (!radarrIndexer.Equals(remoteIndexer))
-                    {
-                        _radarrV3Proxy.UpdateIndexer(radarrIndexer, Settings);
-                    }
+                if (indexer.Capabilities.Categories.SupportedCategories(Settings.SyncCategories.ToArray()).Any())
+                {
+                    _logger.Debug("Remote indexer not found, re-adding {0} to Radarr", indexer.Name);
+                    radarrIndexer.Id = 0;
+                    var newRemoteIndexer = _radarrV3Proxy.AddIndexer(radarrIndexer, Settings);
+                    _appIndexerMapService.Insert(new AppIndexerMap
+                    { AppId = Definition.Id, IndexerId = indexer.Id, RemoteIndexerId = newRemoteIndexer.Id });
                 }
                 else
                 {
-                    _appIndexerMapService.Delete(indexerMapping.Id);
-
-                    if (indexer.Capabilities.Categories.SupportedCategories(Settings.SyncCategories.ToArray()).Any())
-                    {
-                        _logger.Debug("Remote indexer not found, re-adding {0} to Radarr", indexer.Name);
-                        radarrIndexer.Id = 0;
-                        var newRemoteIndexer = _radarrV3Proxy.AddIndexer(radarrIndexer, Settings);
-                        _appIndexerMapService.Insert(new AppIndexerMap
-                        { AppId = Definition.Id, IndexerId = indexer.Id, RemoteIndexerId = newRemoteIndexer.Id });
-                    }
-                    else
-                    {
-                        _logger.Debug(
-                            "Remote indexer not found for {0}, skipping re-add to Radarr due to indexer capabilities",
-                            indexer.Name);
-                    }
+                    _logger.Debug(
+                        "Remote indexer not found for {0}, skipping re-add to Radarr due to indexer capabilities",
+                        indexer.Name);
                 }
             }
         }
