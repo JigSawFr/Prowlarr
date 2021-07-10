@@ -6,21 +6,18 @@ import EnhancedSelectInput from './EnhancedSelectInput';
 
 function createMapStateToProps() {
   return createSelector(
-    (state, { value }) => value,
     (state) => state.settings.appProfiles.items,
-    (value, appProfiles) => {
+    (appProfiles) => {
       const values = [];
 
       appProfiles.forEach((appProfile) => {
         values.push({
           key: appProfile.id,
-          value: appProfile.name,
-          hint: `(${appProfile.id})`
+          value: appProfile.name
         });
       });
 
       return {
-        value,
         values
       };
     }
@@ -51,8 +48,7 @@ class AppProfileSelectInputConnector extends Component {
 
 AppProfileSelectInputConnector.propTypes = {
   name: PropTypes.string.isRequired,
-  appProfileIds: PropTypes.arrayOf(PropTypes.number).isRequired,
-  value: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  appProfileIds: PropTypes.arrayOf(PropTypes.number),
   values: PropTypes.arrayOf(PropTypes.object).isRequired,
   onChange: PropTypes.func.isRequired
 };
