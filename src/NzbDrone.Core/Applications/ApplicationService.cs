@@ -143,12 +143,9 @@ namespace NzbDrone.Core.Applications
 
                     if (indexerMappings.Any(x => x.IndexerId == definition.Id))
                     {
-                        if (((ApplicationDefinition)app.Definition).SyncLevel == ApplicationSyncLevel.FullSync)
+                        if (((ApplicationDefinition)app.Definition).SyncLevel == ApplicationSyncLevel.FullSync && definition.AppProfiles.Any(p => p.ApplicationIDs.Contains(app.Definition.Id)))
                         {
-                            if (definition.AppProfiles.Any(p => p.ApplicationIDs.Contains(app.Definition.Id)))
-                            {
                                 ExecuteAction(a => a.UpdateIndexer(definition), app);
-                            }
                         }
                     }
                     else
@@ -170,7 +167,7 @@ namespace NzbDrone.Core.Applications
                             ExecuteAction(a => a.RemoveIndexer(mapping.IndexerId), app);
                         }
 
-                        if (!indexers.Any(x => x.AppProfiles.Any(p => p.ApplicationIDs.Contains(mapping.AppId))))
+                        if (!indexers.Any(x => x.AppProfiles.Any(p => !p.ApplicationIDs.Contains(mapping.AppId))))
                         {
                             _logger.Info("Indexer with the ID {0} was found within {1} but is no longer wanted via the AppProfiles set, this is being removed", mapping.IndexerId, app.Name);
                             ExecuteAction(a => a.RemoveIndexer(mapping.IndexerId), app);
