@@ -121,7 +121,7 @@
     "run-sequence": "2.2.1",
     "streamqueue": "1.1.2",
     "style-loader": "3.3.1",
-    "stylelint": "14.1.0",
+    "stylelint": "15.10.1",
     "stylelint-order": "5.0.0",
     "url-loader": "4.1.1",
     "webpack": "5.64.2",
